@@ -1,0 +1,3 @@
+/Users/zdenko_kanos/Developer/C/C-STU/DSA/Prim/cmake-build-debug/CMakeFiles/Prim.dir
+/Users/zdenko_kanos/Developer/C/C-STU/DSA/Prim/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/zdenko_kanos/Developer/C/C-STU/DSA/Prim/cmake-build-debug/CMakeFiles/rebuild_cache.dir
