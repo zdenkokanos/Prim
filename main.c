@@ -229,39 +229,20 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool fi
     return 0;
 }
 
-void bubble_sort(PQ_E spanning_tree[], int capacity)
-{
+void bubble_sort(PQ_E spanning_tree[], int capacity) {
     int i, j;
     bool swapped = false;
-    for (i = 0; i < capacity; i++)
-    {
-        for (j = 0; j < capacity - i - 1; j++)
-        {
-            if ((spanning_tree[j].index > spanning_tree[j + 1].index ||
-                 spanning_tree[j].destination > spanning_tree[j + 1].destination))
-            {
+    for (i = 0; i < capacity - 1; i++) {
+        swapped = false;
+        for (j = 0; j < capacity - i - 1; j++) {
+            if (spanning_tree[j].index > spanning_tree[j + 1].index ||
+                (spanning_tree[j].index == spanning_tree[j + 1].index &&
+                 spanning_tree[j].destination > spanning_tree[j + 1].destination)) {
                 swap(&spanning_tree[j], &spanning_tree[j + 1]);
                 swapped = true;
             }
         }
-        if (swapped == false)
-        {
-            break;
-        }
-    }
-
-    for (i = 0; i < capacity; i++)
-    {
-        for (j = 0; j < capacity - i - 1; j++)
-        {
-            if ((spanning_tree[j].index > spanning_tree[j + 1].index))
-            {
-                swap(&spanning_tree[j], &spanning_tree[j + 1]);
-                swapped = true;
-            }
-        }
-        if (swapped == false)
-        {
+        if (swapped == false) {
             break;
         }
     }
