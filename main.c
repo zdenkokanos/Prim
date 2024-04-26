@@ -34,7 +34,7 @@ typedef struct pq
 PQ *create_priorityQueue(int capacity)
 {
     PQ *priorityQueue = (PQ *) malloc(sizeof(PQ));
-    priorityQueue->heap = (PQ_E *) malloc(1000 * sizeof(PQ_E));
+    priorityQueue->heap = (PQ_E *) malloc(2000 * sizeof(PQ_E));
     priorityQueue->size = 0;
     return priorityQueue;
 }
@@ -219,12 +219,8 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool fi
     }
     else
     {
-        current = graph[vertex1]->neighbours;
-        while (current->next != NULL)
-        {
-            current = current->next;
-        }
-        current->next = neighbour;
+        neighbour->next = graph[vertex1]->neighbours;
+        graph[vertex1]->neighbours = neighbour;
     }
     if (first_one == true)
     {
