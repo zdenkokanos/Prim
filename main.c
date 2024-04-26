@@ -9,7 +9,7 @@ typedef char bool;
 typedef struct neighbour
 {
     int index;
-    int weight;
+    long long weight;
     struct neighbour *next;
 } NEIGHBOURS;
 
@@ -22,7 +22,7 @@ typedef struct pq_e
 {
     int index;
     int destination;
-    int weight;
+    long long weight;
 } PQ_E;
 
 typedef struct pq
@@ -34,7 +34,7 @@ typedef struct pq
 PQ *create_priorityQueue(int capacity)
 {
     PQ *priorityQueue = (PQ *) malloc(sizeof(PQ));
-    priorityQueue->heap = (PQ_E *) malloc(2 * capacity * sizeof(PQ_E));
+    priorityQueue->heap = (PQ_E *) malloc(1000 * sizeof(PQ_E));
     priorityQueue->size = 0;
     return priorityQueue;
 }
@@ -86,7 +86,7 @@ void heapify_down(PQ *priorityQueue, int index)
     }
 }
 
-void insert(PQ *priorityQueue, int index, int destination, int weight)
+void insert(PQ *priorityQueue, int index, int destination, long long weight)
 {
     priorityQueue->heap[priorityQueue->size].index = index;
     priorityQueue->heap[priorityQueue->size].weight = weight;
@@ -115,10 +115,13 @@ void destroy_priorityQueue(PQ *priorityQueue)
     free(priorityQueue);
 }
 
-int update(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one, int N)
+int update(VERTEX **graph, int vertex1, int vertex2, long long weight, bool first_one, int N)
 {
     if (vertex1 > N - 1 || vertex2 > N - 1)
     {
+        return 1;
+    }
+    if(vertex1 == vertex2){
         return 1;
     }
     NEIGHBOURS *current = graph[vertex1]->neighbours;
@@ -135,7 +138,7 @@ int update(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one,
         return 1;
     }
     int newWeight = current->weight + weight;
-    if (newWeight < 0)
+    if (newWeight <= 0)
     {
         return 1;
     }
@@ -155,6 +158,9 @@ int delete(VERTEX **graph, int vertex1, int vertex2, bool first_one)
 {
     NEIGHBOURS *current = graph[vertex1]->neighbours;
     NEIGHBOURS *previous = NULL;
+    if(vertex1 == vertex2){
+        return 1;
+    }
     while (current != NULL)
     {
         if (current->index == vertex2)
@@ -185,10 +191,13 @@ int delete(VERTEX **graph, int vertex1, int vertex2, bool first_one)
     return 0;
 }
 
-int add_edge(VERTEX **graph, int vertex1, int vertex2, int weight, bool first_one, int N)
+int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool first_one, int N)
 {
     if (vertex1 > N - 1 || vertex2 > N - 1)
     {
+        return 1;
+    }
+    if(vertex1 == vertex2){
         return 1;
     }
     NEIGHBOURS *current = graph[vertex1]->neighbours;
@@ -287,7 +296,7 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
         current = current->next;
     }
 
-    int total_cost = 0;
+    long long total_cost = 0;
 
     while (!is_empty(priorityQueue))
     {
@@ -327,7 +336,7 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
         {
             printf("\n");
         }
-        printf("%d: [", total_cost);
+        printf("%lld: [", total_cost);
 
         for (int i = 0; i < capacity; i++)
         {
@@ -352,7 +361,8 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
 int main()
 {
     int N;
-    int vertex1, vertex2, weight;
+    int vertex1, vertex2;
+    long long weight;
     char input;
     bool printed = false;
     scanf("%d", &N);
@@ -363,7 +373,7 @@ int main()
         newVertex->neighbours = NULL;
         graph[i] = newVertex;
     }
-    while (scanf(" (%d, %d, %d)", &vertex1, &vertex2, &weight) == 3)
+    while (scanf(" (%d, %d, %lld)", &vertex1, &vertex2, &weight) == 3)
     {
 
         if (add_edge(graph, vertex1, vertex2, weight, true, N) == 1)
@@ -416,7 +426,7 @@ int main()
                 }
                 break;
             case 'i':
-                scanf(" %d %d %d", &vertex1, &vertex2, &weight);
+                scanf(" %d %d %lld", &vertex1, &vertex2, &weight);
                 if (add_edge(graph, vertex1, vertex2, weight, true, N) == 1)
                 {
                     if (printed == false)
@@ -431,7 +441,7 @@ int main()
                 }
                 break;
             case 'u':
-                scanf(" %d %d %d", &vertex1, &vertex2, &weight);
+                scanf(" %d %d %lld", &vertex1, &vertex2, &weight);
                 if (update(graph, vertex1, vertex2, weight, true, N) == 1)
                 {
                     if (printed == false)
