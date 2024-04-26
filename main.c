@@ -121,7 +121,8 @@ int update(VERTEX **graph, int vertex1, int vertex2, long long weight, bool firs
     {
         return 1;
     }
-    if(vertex1 == vertex2){
+    if (vertex1 == vertex2)
+    {
         return 1;
     }
     NEIGHBOURS *current = graph[vertex1]->neighbours;
@@ -158,7 +159,8 @@ int delete(VERTEX **graph, int vertex1, int vertex2, bool first_one)
 {
     NEIGHBOURS *current = graph[vertex1]->neighbours;
     NEIGHBOURS *previous = NULL;
-    if(vertex1 == vertex2){
+    if (vertex1 == vertex2)
+    {
         return 1;
     }
     while (current != NULL)
@@ -197,7 +199,8 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool fi
     {
         return 1;
     }
-    if(vertex1 == vertex2){
+    if (vertex1 == vertex2)
+    {
         return 1;
     }
     NEIGHBOURS *current = graph[vertex1]->neighbours;
@@ -229,23 +232,22 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool fi
     return 0;
 }
 
-void bubble_sort(PQ_E spanning_tree[], int capacity) {
-    int i, j;
-    bool swapped = false;
-    for (i = 0; i < capacity - 1; i++) {
-        swapped = false;
-        for (j = 0; j < capacity - i - 1; j++) {
-            if (spanning_tree[j].index > spanning_tree[j + 1].index ||
-                (spanning_tree[j].index == spanning_tree[j + 1].index &&
-                 spanning_tree[j].destination > spanning_tree[j + 1].destination)) {
-                swap(&spanning_tree[j], &spanning_tree[j + 1]);
-                swapped = true;
-            }
-        }
-        if (swapped == false) {
-            break;
-        }
+void insert_sort(PQ_E spanning_tree[], int capacity, PQ_E min_edge)
+{
+    if (capacity == 0)
+    {
+        spanning_tree[0] = min_edge;
+        return;
     }
+    int j = capacity - 1;
+    while (j >= 0 && (spanning_tree[j].index > min_edge.index ||
+                      (spanning_tree[j].index == min_edge.index &&
+                       spanning_tree[j].destination > min_edge.destination)))
+    {
+        spanning_tree[j + 1] = spanning_tree[j];
+        j--;
+    }
+    spanning_tree[j + 1] = min_edge;
 }
 
 int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
@@ -280,32 +282,28 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
         PQ_E min_edge = extract_min(priorityQueue);
         if (visited[min_edge.destination] == false)
         {
-            visited[min_edge.destination] = true;
-            spanning_tree[capacity++] = min_edge;
             total_cost += min_edge.weight;
+            int destination_index = min_edge.destination;
             current = graph[min_edge.destination]->neighbours;
+            visited[min_edge.destination] = true;
+            if (min_edge.index > min_edge.destination)
+            {
+                int temp = min_edge.index;
+                min_edge.index = min_edge.destination;
+                min_edge.destination = temp;
+            }
+            insert_sort(spanning_tree, capacity, min_edge);
+            capacity++;
             while (current != NULL)
             {
                 if (visited[current->index] == false)
                 {
-                    insert(priorityQueue, min_edge.destination, current->index, current->weight);
+                    insert(priorityQueue, destination_index, current->index, current->weight);
                 }
                 current = current->next;
             }
         }
     }
-
-    for (int i = 0; i < capacity; i++)
-    {
-        if (spanning_tree[i].index > spanning_tree[i].destination)
-        {
-            int temp = spanning_tree[i].index;
-            spanning_tree[i].index = spanning_tree[i].destination;
-            spanning_tree[i].destination = temp;
-        }
-    }
-
-    bubble_sort(spanning_tree, capacity);
 
     if (capacity > 0)
     {
