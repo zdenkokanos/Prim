@@ -46,43 +46,37 @@ void swap(PQ_E *a, PQ_E *b)
     *b = temp;
 }
 
-void heapify_up(PQ *priorityQueue, int index)
-{
-    if (index <= 0)
-    {
-        return;
-    }
-
-    int parent = (index - 1) / 2;
-    if (priorityQueue->heap[parent].weight > priorityQueue->heap[index].weight)
-    {
-        swap(&priorityQueue->heap[parent], &priorityQueue->heap[index]);
-        heapify_up(priorityQueue, parent);
+void heapify_up(PQ *priorityQueue, int index) {
+    while (index > 0) {
+        int parent = (index - 1) / 2;
+        if (priorityQueue->heap[parent].weight > priorityQueue->heap[index].weight) {
+            swap(&priorityQueue->heap[parent], &priorityQueue->heap[index]);
+            index = parent;
+        } else {
+            break;
+        }
     }
 }
 
-void heapify_down(PQ *priorityQueue, int index)
-{
-    int left_child = 2 * index + 1;
-    int right_child = 2 * index + 2;
-    int smallest = index;
+void heapify_down(PQ *priorityQueue, int index) {
+    int size = priorityQueue->size;
+    while (true) {
+        int left_child = 2 * index + 1;
+        int right_child = 2 * index + 2;
+        int smallest = index;
 
-    if (left_child < priorityQueue->size &&
-        priorityQueue->heap[left_child].weight < priorityQueue->heap[smallest].weight)
-    {
-        smallest = left_child;
-    }
-
-    if (right_child < priorityQueue->size &&
-        priorityQueue->heap[right_child].weight < priorityQueue->heap[smallest].weight)
-    {
-        smallest = right_child;
-    }
-
-    if (smallest != index)
-    {
-        swap(&priorityQueue->heap[index], &priorityQueue->heap[smallest]);
-        heapify_down(priorityQueue, smallest);
+        if (left_child < size && priorityQueue->heap[left_child].weight < priorityQueue->heap[smallest].weight) {
+            smallest = left_child;
+        }
+        if (right_child < size && priorityQueue->heap[right_child].weight < priorityQueue->heap[smallest].weight) {
+            smallest = right_child;
+        }
+        if (smallest != index) {
+            swap(&priorityQueue->heap[index], &priorityQueue->heap[smallest]);
+            index = smallest;
+        } else {
+            break;
+        }
     }
 }
 
