@@ -5,18 +5,6 @@
 #define false 'f'
 typedef char bool;
 
-typedef struct neighbour
-{
-    int index;
-    long long weight;
-    struct neighbour *next;
-} NEIGHBOURS;
-
-typedef struct vertex
-{
-    NEIGHBOURS *neighbours;
-} VERTEX;
-
 typedef struct pq_e
 {
     int index;
@@ -135,7 +123,43 @@ void destroy_priorityQueue(PQ *priorityQueue)
     free(priorityQueue);
 }
 
-int update(VERTEX **graph, int vertex1, int vertex2, long long weight, bool first_one, int N)
+int update(long long **graph, int vertex1, int vertex2, long long weight, int N)
+{
+    if (vertex1 >= N || vertex2 >= N || vertex1 == vertex2 || graph[vertex1][vertex2] == -1)
+    {
+        return 1;
+    }
+    if (graph[vertex1][vertex2] + weight > 0)
+    {
+        graph[vertex1][vertex2] += weight;
+        graph[vertex2][vertex1] += weight;
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+int delete(long long **graph, int vertex1, int vertex2)
+{
+    if (vertex1 == vertex2)
+    {
+        return 1;
+    }
+    if (graph[vertex1][vertex2] != -1)
+    {
+        graph[vertex1][vertex2] = -1;
+        graph[vertex2][vertex1] = -1;
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+int add_edge(long long **graph, int vertex1, int vertex2, long long weight, int N)
 {
     if (vertex1 > N - 1 || vertex2 > N - 1)
     {
@@ -145,110 +169,12 @@ int update(VERTEX **graph, int vertex1, int vertex2, long long weight, bool firs
     {
         return 1;
     }
-    NEIGHBOURS *current = graph[vertex1]->neighbours;
-    while (current != NULL)
-    {
-        if (current->index == vertex2)
-        {
-            break;
-        }
-        current = current->next;
-    }
-    if (current == NULL)
-    {
+    if(graph[vertex1][vertex2]!=-1){
         return 1;
-    }
-    int newWeight = current->weight + weight;
-    if (newWeight <= 0)
-    {
-        return 1;
-    }
-    else
-    {
-        current->weight = newWeight;
     }
 
-    if (first_one == true)
-    {
-        update(graph, vertex2, vertex1, weight, false, N);
-    }
-    return 0;
-}
-
-int delete(VERTEX **graph, int vertex1, int vertex2, bool first_one)
-{
-    NEIGHBOURS *current = graph[vertex1]->neighbours;
-    NEIGHBOURS *previous = NULL;
-    if (vertex1 == vertex2)
-    {
-        return 1;
-    }
-    while (current != NULL)
-    {
-        if (current->index == vertex2)
-        {
-            break;
-        }
-        previous = current;
-        current = current->next;
-    }
-    if (current == NULL)
-    {
-        return 1;
-    }
-    if (current == graph[vertex1]->neighbours)
-    {
-        graph[vertex1]->neighbours = current->next;
-        free(current);
-    }
-    else
-    {
-        previous->next = current->next;
-        free(current);
-    }
-    if (first_one == true)
-    {
-        delete(graph, vertex2, vertex1, false);
-    }
-    return 0;
-}
-
-int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool first_one, int N)
-{
-    if (vertex1 > N - 1 || vertex2 > N - 1)
-    {
-        return 1;
-    }
-    if (vertex1 == vertex2)
-    {
-        return 1;
-    }
-    NEIGHBOURS *current = graph[vertex1]->neighbours;
-    while (current != NULL)
-    {
-        if (current->index == vertex2)
-        {
-            return 1;
-        }
-        current = current->next;
-    }
-    NEIGHBOURS *neighbour = (NEIGHBOURS *) malloc(sizeof(NEIGHBOURS));
-    neighbour->index = vertex2;
-    neighbour->weight = weight;
-    neighbour->next = NULL;
-    if (graph[vertex1]->neighbours == NULL)
-    {
-        graph[vertex1]->neighbours = neighbour;
-    }
-    else
-    {
-        neighbour->next = graph[vertex1]->neighbours;
-        graph[vertex1]->neighbours = neighbour;
-    }
-    if (first_one == true)
-    {
-        add_edge(graph, vertex2, vertex1, weight, false, N);
-    }
+    graph[vertex1][vertex2] = weight;
+    graph[vertex2][vertex1] = weight;
     return 0;
 }
 
@@ -270,16 +196,11 @@ void insert_sort(PQ_E spanning_tree[], int capacity, PQ_E min_edge)
     spanning_tree[j + 1] = min_edge;
 }
 
-int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
+int prim_alg(long long **graph, int starting_vertex, int N, bool *printed)
 {
     PQ_E spanning_tree[N];
     bool visited[N];
     int capacity = 0;
-//    int **addedToHeap = malloc(N * sizeof(int *));
-//    for (int i = 0; i < N; i++)
-//    {
-//        addedToHeap[i] = calloc(N, sizeof(int));
-//    }
 
     if (starting_vertex > N)
     {
@@ -293,12 +214,13 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
 
     PQ *priorityQueue = create_priorityQueue(N);
     visited[starting_vertex] = true;
-    NEIGHBOURS *current = graph[starting_vertex]->neighbours;
-    while (current != NULL)
+    for (int j = 0; j < N; j++)
     {
-        insert(priorityQueue, starting_vertex, current->index, current->weight);
-        //addedToHeap[starting_vertex][current->index] = 1;
-        current = current->next;
+
+        if (graph[starting_vertex][j] != -1)
+        {
+            insert(priorityQueue, starting_vertex, j, graph[starting_vertex][j]);
+        }
     }
 
     long long total_cost = 0;
@@ -310,7 +232,6 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
         {
             total_cost += min_edge.weight;
             int destination_index = min_edge.destination;
-            current = graph[min_edge.destination]->neighbours;
             visited[min_edge.destination] = true;
             if (min_edge.index > min_edge.destination)
             {
@@ -320,18 +241,15 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
             }
             insert_sort(spanning_tree, capacity, min_edge);
             capacity++;
-            while (current != NULL)
+            for (int i = 0; i < N; i++)
             {
-                if (visited[current->index] == false)
+                if (visited[i] == false)
                 {
-//                {
-//                    if (!addedToHeap[current->index][destination_index] )
-//                    {
-//                        addedToHeap[current->index][destination_index] = 1;
-                    insert(priorityQueue, destination_index, current->index, current->weight);
-                    //}
+                    if (graph[destination_index][i] != -1)
+                    {
+                        insert(priorityQueue, destination_index, i, graph[destination_index][i]);
+                    }
                 }
-                current = current->next;
             }
         }
     }
@@ -376,17 +294,18 @@ int main()
     char input;
     bool printed = false;
     scanf("%d", &N);
-    VERTEX **graph = (VERTEX **) malloc(N * sizeof(VERTEX *));
+    long long **graph = (long long **) malloc(N * sizeof(long long *));
     for (int i = 0; i < N; i++)
     {
-        VERTEX *newVertex = (VERTEX *) malloc(sizeof(VERTEX));
-        newVertex->neighbours = NULL;
-        graph[i] = newVertex;
+        graph[i] = (long long *) malloc(N * sizeof(long long));
+        for (int j = 0; j < N; j++) {
+            graph[i][j] = -1;
+        }
     }
     while (scanf(" (%d, %d, %lld)", &vertex1, &vertex2, &weight) == 3)
     {
 
-        if (add_edge(graph, vertex1, vertex2, weight, true, N) == 1)
+        if (add_edge(graph, vertex1, vertex2, weight, N) == 1)
         {
             if (printed == false)
             {
@@ -422,7 +341,7 @@ int main()
                 break;
             case 'd':
                 scanf(" %d %d", &vertex1, &vertex2);
-                if (delete(graph, vertex1, vertex2, true) == 1)
+                if (delete(graph, vertex1, vertex2) == 1)
                 {
                     if (printed == false)
                     {
@@ -437,7 +356,7 @@ int main()
                 break;
             case 'i':
                 scanf(" %d %d %lld", &vertex1, &vertex2, &weight);
-                if (add_edge(graph, vertex1, vertex2, weight, true, N) == 1)
+                if (add_edge(graph, vertex1, vertex2, weight, N) == 1)
                 {
                     if (printed == false)
                     {
@@ -452,7 +371,7 @@ int main()
                 break;
             case 'u':
                 scanf(" %d %d %lld", &vertex1, &vertex2, &weight);
-                if (update(graph, vertex1, vertex2, weight, true, N) == 1)
+                if (update(graph, vertex1, vertex2, weight, N) == 1)
                 {
                     if (printed == false)
                     {
@@ -470,15 +389,7 @@ int main()
         }
     }
 
-    for (int i = 0; i < N; i++)
-    {
-        NEIGHBOURS *current = graph[i]->neighbours;
-        while (current != NULL)
-        {
-            NEIGHBOURS *temp = current;
-            current = current->next;
-            free(temp);
-        }
+    for (int i = 0; i < N; i++) {
         free(graph[i]);
     }
     free(graph);
