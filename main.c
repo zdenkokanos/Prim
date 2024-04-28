@@ -18,101 +18,160 @@ typedef struct vertex
     NEIGHBOURS *neighbours;
 } VERTEX;
 
-typedef struct pq_e
-{
+typedef struct fib_node {
     int index;
     int destination;
     long long weight;
-} PQ_E;
+    int degree;
+    struct fib_node *parent;
+    struct fib_node *child;
+    struct fib_node *left;
+    struct fib_node *right;
+    char mark;
+} FIB_NODE;
 
-typedef struct pq
-{
-    PQ_E *heap;
-    int size;
-} PQ;
+typedef struct fib_heap {
+    FIB_NODE *min;
+    int n;  // Number of nodes in the heap
+} FIB_HEAP;
 
-PQ *create_priorityQueue(int capacity)
-{
-    PQ *priorityQueue = (PQ *) malloc(sizeof(PQ));
-    priorityQueue->heap = (PQ_E *) malloc(2000 * sizeof(PQ_E));
-    priorityQueue->size = 0;
-    return priorityQueue;
+FIB_HEAP* create_fibonacci_heap() {
+    FIB_HEAP* heap = (FIB_HEAP*) malloc(sizeof(FIB_HEAP));
+    heap->min = NULL;
+    heap->n = 0;
+    return heap;
 }
 
-void swap(PQ_E *a, PQ_E *b)
-{
-    PQ_E temp = *a;
-    *a = *b;
-    *b = temp;
+FIB_NODE* create_fib_node(int index, int destination, long long weight) {
+    FIB_NODE* node = (FIB_NODE*) malloc(sizeof(FIB_NODE));
+    node->index = index;
+    node->destination = destination;
+    node->weight = weight;
+    node->degree = 0;
+    node->parent = NULL;
+    node->child = NULL;
+    node->left = node;
+    node->right = node;
+    node->mark = 'f';
+    return node;
 }
 
-void heapify_up(PQ *priorityQueue, int index)
-{
-    if (index <= 0)
-    {
-        return;
+void fib_heap_insert(FIB_HEAP* heap, FIB_NODE* node) {
+    if (heap->min == NULL) {
+        heap->min = node;
+    } else {
+        node->left = heap->min;
+        node->right = heap->min->right;
+        heap->min->right = node;
+        node->right->left = node;
+        if (node->weight < heap->min->weight) {
+            heap->min = node;
+        }
     }
+    heap->n++;
+}
 
-    int parent = (index - 1) / 2;
-    if (priorityQueue->heap[parent].weight > priorityQueue->heap[index].weight)
-    {
-        swap(&priorityQueue->heap[parent], &priorityQueue->heap[index]);
-        heapify_up(priorityQueue, parent);
+void fib_heap_link(FIB_HEAP* heap, FIB_NODE* y, FIB_NODE* x) {
+    // Remove y from root list
+    y->left->right = y->right;
+    y->right->left = y->left;
+    // Make y a child of x
+    if (x->child == NULL) {
+        x->child = y;
+        y->right = y;
+        y->left = y;
+    } else {
+        y->left = x->child;
+        y->right = x->child->right;
+        x->child->right = y;
+        y->right->left = y;
+    }
+    y->parent = x;
+    x->degree++;
+    y->mark = 'f';
+}
+
+void consolidate(FIB_HEAP* heap) {
+    int D = 40;  // An upper bound on degree, depending on heap->n
+    FIB_NODE* A[D];
+    for (int i = 0; i < D; i++) A[i] = NULL;
+
+    FIB_NODE* start = heap->min;
+    FIB_NODE* w = start;
+    do {
+        FIB_NODE* x = w;
+        w = w->right;
+        int d = x->degree;
+        while (A[d] != NULL) {
+            FIB_NODE* y = A[d];
+            if (x->weight > y->weight) {
+                FIB_NODE* temp = x;
+                x = y;
+                y = temp;
+            }
+            if (y == start) start = start->right;
+            if (y == w) w = w->right;
+            fib_heap_link(heap, y, x);
+            A[d] = NULL;
+            d++;
+        }
+        A[d] = x;
+    } while (w != start);
+
+    heap->min = NULL;
+    for (int i = 0; i < D; i++) {
+        if (A[i] != NULL) {
+            if (heap->min == NULL) {
+                heap->min = A[i]->left = A[i]->right = A[i];
+            } else {
+                A[i]->left = heap->min;
+                A[i]->right = heap->min->right;
+                heap->min->right = A[i];
+                A[i]->right->left = A[i];
+                if (A[i]->weight < heap->min->weight) {
+                    heap->min = A[i];
+                }
+            }
+        }
     }
 }
 
-void heapify_down(PQ *priorityQueue, int index)
-{
-    int left_child = 2 * index + 1;
-    int right_child = 2 * index + 2;
-    int smallest = index;
 
-    if (left_child < priorityQueue->size &&
-        priorityQueue->heap[left_child].weight < priorityQueue->heap[smallest].weight)
-    {
-        smallest = left_child;
+
+FIB_NODE* fib_heap_extract_min(FIB_HEAP* heap) {
+    FIB_NODE* z = heap->min;
+    if (z != NULL) {
+        FIB_NODE* child = z->child;
+        if (child != NULL) {
+            do {
+                FIB_NODE* next = child->right;
+                // add child to root list
+                child->left = heap->min;
+                child->right = heap->min->right;
+                heap->min->right = child;
+                child->right->left = child;
+                child->parent = NULL;
+                child = next;
+            } while (child != z->child);
+        }
+
+        // Remove z from root list
+        z->left->right = z->right;
+        z->right->left = z->left;
+
+        if (z == z->right) {
+            heap->min = NULL;
+        } else {
+            heap->min = z->right;
+            consolidate(heap);
+        }
+        heap->n--;
     }
-
-    if (right_child < priorityQueue->size &&
-        priorityQueue->heap[right_child].weight < priorityQueue->heap[smallest].weight)
-    {
-        smallest = right_child;
-    }
-
-    if (smallest != index)
-    {
-        swap(&priorityQueue->heap[index], &priorityQueue->heap[smallest]);
-        heapify_down(priorityQueue, smallest);
-    }
+    return z;
 }
 
-void insert(PQ *priorityQueue, int index, int destination, long long weight)
-{
-    priorityQueue->heap[priorityQueue->size].index = index;
-    priorityQueue->heap[priorityQueue->size].weight = weight;
-    priorityQueue->heap[priorityQueue->size].destination = destination;
-    priorityQueue->size++;
-    heapify_up(priorityQueue, priorityQueue->size - 1);
-}
-
-PQ_E extract_min(PQ *priorityQueue)
-{
-    PQ_E min = priorityQueue->heap[0];
-    priorityQueue->heap[0] = priorityQueue->heap[priorityQueue->size - 1];
-    priorityQueue->size--;
-    heapify_down(priorityQueue, 0);
-    return min;
-}
-
-int is_empty(PQ *priorityQueue)
-{
-    return priorityQueue->size == 0;
-}
-
-void destroy_priorityQueue(PQ *priorityQueue)
-{
-    free(priorityQueue->heap);
-    free(priorityQueue);
+void destroy_fibonacci_heap(FIB_HEAP *heap) {
+    free(heap);
 }
 
 int update(VERTEX **graph, int vertex1, int vertex2, long long weight, bool first_one, int N)
@@ -232,7 +291,7 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool fi
     return 0;
 }
 
-void insert_sort(PQ_E spanning_tree[], int capacity, PQ_E min_edge)
+void insert_sort(FIB_NODE *spanning_tree[], int capacity, FIB_NODE *min_edge)
 {
     if (capacity == 0)
     {
@@ -240,9 +299,9 @@ void insert_sort(PQ_E spanning_tree[], int capacity, PQ_E min_edge)
         return;
     }
     int j = capacity - 1;
-    while (j >= 0 && (spanning_tree[j].index > min_edge.index ||
-                      (spanning_tree[j].index == min_edge.index &&
-                       spanning_tree[j].destination > min_edge.destination)))
+    while (j >= 0 && (spanning_tree[j]->index > min_edge->index ||
+                      (spanning_tree[j]->index == min_edge->index &&
+                       spanning_tree[j]->destination > min_edge->destination)))
     {
         spanning_tree[j + 1] = spanning_tree[j];
         j--;
@@ -252,7 +311,7 @@ void insert_sort(PQ_E spanning_tree[], int capacity, PQ_E min_edge)
 
 int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
 {
-    PQ_E spanning_tree[N];
+    FIB_NODE *spanning_tree[N];
     bool visited[N];
     int capacity = 0;
 
@@ -266,31 +325,31 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
         visited[i] = false;
     }
 
-    PQ *priorityQueue = create_priorityQueue(N);
+    FIB_HEAP *priorityQueue = create_fibonacci_heap();
     visited[starting_vertex] = true;
     NEIGHBOURS *current = graph[starting_vertex]->neighbours;
-    while (current != NULL)
-    {
-        insert(priorityQueue, starting_vertex, current->index, current->weight);
+    while (current != NULL) {
+        FIB_NODE *node = create_fib_node(starting_vertex, current->index, current->weight);
+        fib_heap_insert(priorityQueue, node);
         current = current->next;
     }
 
     long long total_cost = 0;
 
-    while (!is_empty(priorityQueue))
+    while (priorityQueue->n != 0)
     {
-        PQ_E min_edge = extract_min(priorityQueue);
-        if (visited[min_edge.destination] == false)
+        FIB_NODE *min_edge = fib_heap_extract_min(priorityQueue);
+        if (visited[min_edge->destination] == false)
         {
-            total_cost += min_edge.weight;
-            int destination_index = min_edge.destination;
-            current = graph[min_edge.destination]->neighbours;
-            visited[min_edge.destination] = true;
-            if (min_edge.index > min_edge.destination)
+            total_cost += min_edge->weight;
+            int destination_index = min_edge->destination;
+            current = graph[min_edge->destination]->neighbours;
+            visited[min_edge->destination] = true;
+            if (min_edge->index > min_edge->destination)
             {
-                int temp = min_edge.index;
-                min_edge.index = min_edge.destination;
-                min_edge.destination = temp;
+                int temp = min_edge->index;
+                min_edge->index = min_edge->destination;
+                min_edge->destination = temp;
             }
             insert_sort(spanning_tree, capacity, min_edge);
             capacity++;
@@ -298,7 +357,8 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
             {
                 if (visited[current->index] == false)
                 {
-                    insert(priorityQueue, destination_index, current->index, current->weight);
+                    FIB_NODE *node = create_fib_node(destination_index, current->index, current->weight);
+                    fib_heap_insert(priorityQueue, node);
                 }
                 current = current->next;
             }
@@ -315,7 +375,7 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
 
         for (int i = 0; i < capacity; i++)
         {
-            printf("(%d, %d)", spanning_tree[i].index, spanning_tree[i].destination);
+            printf("(%d, %d)", spanning_tree[i]->index, spanning_tree[i]->destination);
             if (i != capacity - 1)
             {
                 printf(", ");
@@ -328,7 +388,7 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
     {
         return 1;
     }
-    destroy_priorityQueue(priorityQueue);
+    destroy_fibonacci_heap(priorityQueue);
     return 0;
 }
 
