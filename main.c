@@ -3,7 +3,6 @@
 
 #define true 't'
 #define false 'f'
-#define MAX_WEIGHT 999999
 typedef char bool;
 
 typedef struct neighbour
@@ -28,15 +27,26 @@ typedef struct pq_e
 typedef struct pq
 {
     PQ_E *heap;
+    int capacity;
     int size;
 } PQ;
 
 PQ *create_priorityQueue(int capacity)
 {
     PQ *priorityQueue = (PQ *) malloc(sizeof(PQ));
-    priorityQueue->heap = (PQ_E *) malloc(2000 * sizeof(PQ_E));
+    priorityQueue->heap = (PQ_E *) malloc(100 * sizeof(PQ_E));
     priorityQueue->size = 0;
+    priorityQueue->capacity = 100;
     return priorityQueue;
+}
+
+void resize(PQ *priorityQueue)
+{
+    int new_capacity = priorityQueue->capacity * 2;
+    PQ_E *new_heap = realloc(priorityQueue->heap, new_capacity * sizeof(PQ_E));
+
+    priorityQueue->heap = new_heap;
+    priorityQueue->capacity = new_capacity;
 }
 
 void swap(PQ_E *a, PQ_E *b)
@@ -48,46 +58,56 @@ void swap(PQ_E *a, PQ_E *b)
 
 void heapify_up(PQ *priorityQueue, int index)
 {
-    if (index <= 0)
+    while (index > 0)
     {
-        return;
-    }
-
-    int parent = (index - 1) / 2;
-    if (priorityQueue->heap[parent].weight > priorityQueue->heap[index].weight)
-    {
-        swap(&priorityQueue->heap[parent], &priorityQueue->heap[index]);
-        heapify_up(priorityQueue, parent);
+        int parent = (index - 1) / 2;
+        if (priorityQueue->heap[parent].weight > priorityQueue->heap[index].weight)
+        {
+            swap(&priorityQueue->heap[parent], &priorityQueue->heap[index]);
+            index = parent;
+        }
+        else
+        {
+            break;
+        }
     }
 }
 
 void heapify_down(PQ *priorityQueue, int index)
 {
-    int left_child = 2 * index + 1;
-    int right_child = 2 * index + 2;
-    int smallest = index;
-
-    if (left_child < priorityQueue->size &&
-        priorityQueue->heap[left_child].weight < priorityQueue->heap[smallest].weight)
+    int size = priorityQueue->size;
+    while (true)
     {
-        smallest = left_child;
-    }
+        int left_child = 2 * index + 1;
+        int right_child = 2 * index + 2;
+        int smallest = index;
 
-    if (right_child < priorityQueue->size &&
-        priorityQueue->heap[right_child].weight < priorityQueue->heap[smallest].weight)
-    {
-        smallest = right_child;
-    }
-
-    if (smallest != index)
-    {
-        swap(&priorityQueue->heap[index], &priorityQueue->heap[smallest]);
-        heapify_down(priorityQueue, smallest);
+        if (left_child < size && priorityQueue->heap[left_child].weight < priorityQueue->heap[smallest].weight)
+        {
+            smallest = left_child;
+        }
+        if (right_child < size && priorityQueue->heap[right_child].weight < priorityQueue->heap[smallest].weight)
+        {
+            smallest = right_child;
+        }
+        if (smallest != index)
+        {
+            swap(&priorityQueue->heap[index], &priorityQueue->heap[smallest]);
+            index = smallest;
+        }
+        else
+        {
+            break;
+        }
     }
 }
 
 void insert(PQ *priorityQueue, int index, int destination, long long weight)
 {
+    if (priorityQueue->size == priorityQueue->capacity)
+    {
+        resize(priorityQueue);
+    }
     priorityQueue->heap[priorityQueue->size].index = index;
     priorityQueue->heap[priorityQueue->size].weight = weight;
     priorityQueue->heap[priorityQueue->size].destination = destination;
@@ -232,12 +252,15 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool fi
     return 0;
 }
 
-int partition(PQ_E arr[], int low, int high) {
+int partition(PQ_E arr[], int low, int high)
+{
     PQ_E pivot = arr[high];
     int i = (low - 1);
 
-    for (int j = low; j <= high - 1; j++) {
-        if (arr[j].index < pivot.index || (arr[j].index == pivot.index && arr[j].destination < pivot.destination)) {
+    for (int j = low; j <= high - 1; j++)
+    {
+        if (arr[j].index < pivot.index || (arr[j].index == pivot.index && arr[j].destination < pivot.destination))
+        {
             i++;
             swap(&arr[i], &arr[j]);
         }
@@ -247,15 +270,15 @@ int partition(PQ_E arr[], int low, int high) {
 }
 
 
-void quick_sort(PQ_E arr[], int low, int high) {
-    if (low < high) {
+void quick_sort(PQ_E arr[], int low, int high)
+{
+    if (low < high)
+    {
         int pivot = partition(arr, low, high);
         quick_sort(arr, low, pivot - 1);
         quick_sort(arr, pivot + 1, high);
     }
 }
-
-
 
 int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
 {
@@ -284,7 +307,7 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
 
     long long total_cost = 0;
 
-    while (!is_empty(priorityQueue))
+    while (!is_empty(priorityQueue) && capacity < N-1)
     {
         PQ_E min_edge = extract_min(priorityQueue);
         if (visited[min_edge.destination] == false)
@@ -299,8 +322,6 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
                 min_edge.index = min_edge.destination;
                 min_edge.destination = temp;
             }
-            spanning_tree[capacity] = min_edge;
-            capacity++;
             while (current != NULL)
             {
                 if (visited[current->index] == false)
@@ -309,6 +330,14 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
                 }
                 current = current->next;
             }
+            if (min_edge.index > min_edge.destination)
+            {
+                int temp = min_edge.index;
+                min_edge.index = min_edge.destination;
+                min_edge.destination = temp;
+            }
+            spanning_tree[capacity] = min_edge;
+            capacity++;
         }
     }
 
