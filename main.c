@@ -31,6 +31,93 @@ typedef struct pq
     int size;
 } PQ;
 
+#define INITIAL_HASH_TABLE_SIZE 10007
+
+typedef struct hash_entry {
+    int vertex1;
+    int vertex2;
+    struct hash_entry *next;
+} HASH_ENTRY;
+
+typedef struct {
+    HASH_ENTRY **entries;
+    int size;
+    int count;
+} HASH_TABLE;
+
+HASH_TABLE *create_hash_table() {
+    HASH_TABLE *hashTable = (HASH_TABLE *) malloc(sizeof(HASH_TABLE));
+    if (!hashTable) return NULL;
+
+    hashTable->size = INITIAL_HASH_TABLE_SIZE;
+    hashTable->count = 0;
+    hashTable->entries = (HASH_ENTRY **) calloc(hashTable->size, sizeof(HASH_ENTRY *));
+    if (!hashTable->entries) {
+        free(hashTable);
+        return NULL;
+    }
+    return hashTable;
+}
+
+int hash(HASH_TABLE *table, int vertex1, int vertex2) {
+    int small = vertex1 < vertex2 ? vertex1 : vertex2;
+    int large = vertex1 >= vertex2 ? vertex1 : vertex2;
+    int hashValue = 31 * small + large;
+    return hashValue % table->size;
+}
+
+void resize_hash_table(HASH_TABLE *table);
+
+int add_hash_entry(HASH_TABLE *table, int vertex1, int vertex2) {
+    if ((double)table->count / table->size >= 0.75) {
+        resize_hash_table(table);
+    }
+
+    int idx = hash(table, vertex1, vertex2);
+    HASH_ENTRY *new_entry = (HASH_ENTRY *) malloc(sizeof(HASH_ENTRY));
+    if (!new_entry) return 1;
+
+    new_entry->vertex1 = vertex1;
+    new_entry->vertex2 = vertex2;
+    new_entry->next = table->entries[idx];
+    table->entries[idx] = new_entry;
+    table->count++;
+    return 0;
+}
+
+void resize_hash_table(HASH_TABLE *table) {
+    int oldSize = table->size;
+    HASH_ENTRY **oldEntries = table->entries;
+
+    table->size *= 2;
+    table->entries = (HASH_ENTRY **) calloc(table->size, sizeof(HASH_ENTRY *));
+    table->count = 0;
+
+    for (int i = 0; i < oldSize; i++) {
+        HASH_ENTRY *entry = oldEntries[i];
+        while (entry) {
+            add_hash_entry(table, entry->vertex1, entry->vertex2);
+            HASH_ENTRY *temp = entry;
+            entry = entry->next;
+            free(temp);
+        }
+    }
+    free(oldEntries);
+}
+
+void free_hash_table(HASH_TABLE *hashTable) {
+    for (int i = 0; i < hashTable->size; i++) {
+        HASH_ENTRY *entry = hashTable->entries[i];
+        while (entry != NULL) {
+            HASH_ENTRY *temp = entry;
+            entry = entry->next;
+            free(temp);
+        }
+    }
+    free(hashTable->entries);
+    free(hashTable);
+}
+
 PQ *create_priorityQueue(int capacity)
 {
     PQ *priorityQueue = (PQ *) malloc(sizeof(PQ));
@@ -173,82 +260,78 @@ int update(VERTEX **graph, int vertex1, int vertex2, long long weight, bool firs
     return 0;
 }
 
-int delete(VERTEX **graph, int vertex1, int vertex2, bool first_one)
-{
-    NEIGHBOURS *current = graph[vertex1]->neighbours;
-    NEIGHBOURS *previous = NULL;
-    if (vertex1 == vertex2)
-    {
+int delete(VERTEX **graph, int vertex1, int vertex2, bool first_one, HASH_TABLE *hashTable) {
+    if (vertex1 == vertex2) {
         return 1;
     }
-    while (current != NULL)
-    {
-        if (current->index == vertex2)
-        {
+
+    int idx = hash(hashTable,vertex1, vertex2);
+    HASH_ENTRY **entry = &(hashTable->entries[idx]);
+    while (*entry != NULL) {
+        if ((*entry)->vertex1 == vertex1 && (*entry)->vertex2 == vertex2) {
+            HASH_ENTRY *temp = *entry;
+            *entry = (*entry)->next;
+            free(temp);
+            break;
+        }
+        entry = &((*entry)->next);
+    }
+
+    // Now delete from adjacency list
+    NEIGHBOURS *current = graph[vertex1]->neighbours;
+    NEIGHBOURS *previous = NULL;
+    while (current != NULL) {
+        if (current->index == vertex2) {
+            if (previous == NULL) graph[vertex1]->neighbours = current->next;
+            else previous->next = current->next;
+            free(current);
             break;
         }
         previous = current;
         current = current->next;
     }
-    if (current == NULL)
-    {
-        return 1;
-    }
-    if (current == graph[vertex1]->neighbours)
-    {
-        graph[vertex1]->neighbours = current->next;
-        free(current);
-    }
-    else
-    {
-        previous->next = current->next;
-        free(current);
-    }
-    if (first_one == true)
-    {
-        delete(graph, vertex2, vertex1, false);
+
+    if (first_one == true) {
+        delete(graph, vertex2, vertex1, false, hashTable);
     }
     return 0;
 }
 
-int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool first_one, int N)
-{
-    if (vertex1 > N - 1 || vertex2 > N - 1)
-    {
+int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool first_one, int N, HASH_TABLE *hashTable) {
+    if (vertex1 > N - 1 || vertex2 > N - 1 || vertex1 == vertex2) {
         return 1;
     }
-    if (vertex1 == vertex2)
-    {
-        return 1;
-    }
-    NEIGHBOURS *current = graph[vertex1]->neighbours;
-    while (current != NULL)
-    {
-        if (current->index == vertex2)
-        {
-            return 1;
+
+    // Check for existing edge using the hash table
+    int idx = hash(hashTable,vertex1, vertex2);
+    HASH_ENTRY *current_entry = hashTable->entries[idx];
+    while (current_entry != NULL) {
+        if (current_entry->vertex1 == vertex1 && current_entry->vertex2 == vertex2) {
+            return 1;  // Edge already exists
         }
-        current = current->next;
+        current_entry = current_entry->next;
     }
+
+    // Add to hash table
+    HASH_ENTRY *new_entry = (HASH_ENTRY *) malloc(sizeof(HASH_ENTRY));
+    new_entry->vertex1 = vertex1;
+    new_entry->vertex2 = vertex2;
+    new_entry->next = hashTable->entries[idx];
+    hashTable->entries[idx] = new_entry;
+
+    // Add to adjacency list
     NEIGHBOURS *neighbour = (NEIGHBOURS *) malloc(sizeof(NEIGHBOURS));
     neighbour->index = vertex2;
     neighbour->weight = weight;
-    neighbour->next = NULL;
-    if (graph[vertex1]->neighbours == NULL)
-    {
-        graph[vertex1]->neighbours = neighbour;
-    }
-    else
-    {
-        neighbour->next = graph[vertex1]->neighbours;
-        graph[vertex1]->neighbours = neighbour;
-    }
-    if (first_one == true)
-    {
-        add_edge(graph, vertex2, vertex1, weight, false, N);
+    neighbour->next = graph[vertex1]->neighbours;
+    graph[vertex1]->neighbours = neighbour;
+
+    if (first_one == true) {
+        add_edge(graph, vertex2, vertex1, weight, false, N, hashTable);  // Add edge in opposite direction
     }
     return 0;
 }
+
 
 void insert_sort(PQ_E spanning_tree[], int capacity, PQ_E min_edge)
 {
@@ -360,6 +443,7 @@ int main()
     bool printed = false;
     scanf("%d", &N);
     VERTEX **graph = (VERTEX **) malloc(N * sizeof(VERTEX *));
+    HASH_TABLE *hashTable = create_hash_table();
     for (int i = 0; i < N; i++)
     {
         VERTEX *newVertex = (VERTEX *) malloc(sizeof(VERTEX));
@@ -369,7 +453,7 @@ int main()
     while (scanf(" (%d, %d, %lld)", &vertex1, &vertex2, &weight) == 3)
     {
 
-        if (add_edge(graph, vertex1, vertex2, weight, true, N) == 1)
+        if (add_edge(graph, vertex1, vertex2, weight, true, N, hashTable) == 1)
         {
             if (printed == false)
             {
@@ -405,7 +489,7 @@ int main()
                 break;
             case 'd':
                 scanf(" %d %d", &vertex1, &vertex2);
-                if (delete(graph, vertex1, vertex2, true) == 1)
+                if (delete(graph, vertex1, vertex2, true, hashTable) == 1)
                 {
                     if (printed == false)
                     {
@@ -420,7 +504,7 @@ int main()
                 break;
             case 'i':
                 scanf(" %d %d %lld", &vertex1, &vertex2, &weight);
-                if (add_edge(graph, vertex1, vertex2, weight, true, N) == 1)
+                if (add_edge(graph, vertex1, vertex2, weight, true, N, hashTable) == 1)
                 {
                     if (printed == false)
                     {
@@ -465,6 +549,7 @@ int main()
         free(graph[i]);
     }
     free(graph);
+    free_hash_table(hashTable);
 
     return 0;
 }
