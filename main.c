@@ -40,7 +40,8 @@ PQ *create_priorityQueue(int capacity)
     return priorityQueue;
 }
 
-void resize(PQ *priorityQueue) {
+void resize(PQ *priorityQueue)
+{
     int new_capacity = priorityQueue->capacity * 2;
     PQ_E *new_heap = realloc(priorityQueue->heap, new_capacity * sizeof(PQ_E));
 
@@ -103,7 +104,8 @@ void heapify_down(PQ *priorityQueue, int index)
 
 void insert(PQ *priorityQueue, int index, int destination, long long weight)
 {
-    if (priorityQueue->size == priorityQueue->capacity) {
+    if (priorityQueue->size == priorityQueue->capacity)
+    {
         resize(priorityQueue);
     }
     priorityQueue->heap[priorityQueue->size].index = index;
@@ -250,34 +252,78 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool fi
     return 0;
 }
 
-void insert_sort(PQ_E spanning_tree[], int capacity, PQ_E min_edge)
+void merge(PQ_E arr[], int l, int m, int r)
 {
-    if (capacity == 0)
+    int i, j, k;
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    // Create temp arrays
+    PQ_E L[n1], R[n2];
+
+    // Copy data to temp arrays L[] and R[]
+    for (i = 0; i < n1; i++)
+        L[i] = arr[l + i];
+    for (j = 0; j < n2; j++)
+        R[j] = arr[m + 1 + j];
+
+    // Merge the temp arrays back into arr[l..r]
+    i = 0;
+    j = 0;
+    k = l;
+    while (i < n1 && j < n2)
     {
-        spanning_tree[0] = min_edge;
-        return;
+        if (L[i].index < R[j].index || (L[i].index == R[j].index && L[i].destination <= R[j].destination))
+        {
+            arr[k] = L[i];
+            i++;
+        }
+        else
+        {
+            arr[k] = R[j];
+            j++;
+        }
+        k++;
     }
-    int j = capacity - 1;
-    while (j >= 0 && (spanning_tree[j].index > min_edge.index ||
-                      (spanning_tree[j].index == min_edge.index &&
-                       spanning_tree[j].destination > min_edge.destination)))
+
+    // Copy the remaining elements of L[], if there are any
+    while (i < n1)
     {
-        spanning_tree[j + 1] = spanning_tree[j];
-        j--;
+        arr[k] = L[i];
+        i++;
+        k++;
     }
-    spanning_tree[j + 1] = min_edge;
+
+    // Copy the remaining elements of R[], if there are any
+    while (j < n2)
+    {
+        arr[k] = R[j];
+        j++;
+        k++;
+    }
 }
+
+void merge_sort(PQ_E arr[], int l, int r)
+{
+    if (l < r)
+    {
+        // Same as (l+r)/2, but avoids overflow for large l and h
+        int m = l + (r - l) / 2;
+
+        // Sort first and second halves
+        merge_sort(arr, l, m);
+        merge_sort(arr, m + 1, r);
+
+        merge(arr, l, m, r);
+    }
+}
+
 
 int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
 {
     PQ_E spanning_tree[N];
     bool visited[N];
     int capacity = 0;
-    int **addedToHeap = malloc(N * sizeof(int *));
-    for (int i = 0; i < N; i++)
-    {
-        addedToHeap[i] = calloc(N, sizeof(int));
-    }
 
     if (starting_vertex > N)
     {
@@ -295,8 +341,6 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
     while (current != NULL)
     {
         insert(priorityQueue, starting_vertex, current->index, current->weight);
-        addedToHeap[starting_vertex][current->index] = 1;
-        addedToHeap[current->index][starting_vertex] = 1;
         current = current->next;
     }
 
@@ -317,23 +361,22 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
                 min_edge.index = min_edge.destination;
                 min_edge.destination = temp;
             }
-            insert_sort(spanning_tree, capacity, min_edge);
+            spanning_tree[capacity] = min_edge;
             capacity++;
             while (current != NULL)
             {
                 if (visited[current->index] == false)
                 {
-                    if (!addedToHeap[current->index][destination_index] || !addedToHeap[destination_index][current->index])
-                    {
-                        addedToHeap[current->index][destination_index] = 1;
-                        addedToHeap[destination_index][current->index] = 1;
-                        insert(priorityQueue, destination_index, current->index, current->weight);
-                    }
+
+                    insert(priorityQueue, destination_index, current->index, current->weight);
+
                 }
                 current = current->next;
             }
         }
     }
+
+    merge_sort(spanning_tree, 0, capacity - 1);
 
     if (capacity > 0)
     {
@@ -358,10 +401,6 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
     {
         return 1;
     }
-    for (int i = 0; i < N; i++) {
-        free(addedToHeap[i]);
-    }
-    free(addedToHeap);
     destroy_priorityQueue(priorityQueue);
     return 0;
 }
