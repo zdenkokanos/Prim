@@ -252,31 +252,26 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool fi
     return 0;
 }
 
-int partition(PQ_E arr[], int low, int high)
-{
-    PQ_E pivot = arr[high];
-    int i = (low - 1);
-
-    for (int j = low; j <= high - 1; j++)
-    {
-        if (arr[j].index < pivot.index || (arr[j].index == pivot.index && arr[j].destination < pivot.destination))
-        {
-            i++;
-            swap(&arr[i], &arr[j]);
-        }
-    }
-    swap(&arr[i + 1], &arr[high]);
-    return (i + 1);
-}
-
-
-void quick_sort(PQ_E arr[], int low, int high)
+void quick_sort(PQ_E spanning_tree[], int low, int high)
 {
     if (low < high)
     {
-        int pivot = partition(arr, low, high);
-        quick_sort(arr, low, pivot - 1);
-        quick_sort(arr, pivot + 1, high);
+        PQ_E pivot = spanning_tree[high];
+        int i = low - 1;
+
+        for (int j = low; j < high; j++)
+        {
+            if (spanning_tree[j].index < pivot.index || (spanning_tree[j].index == pivot.index && spanning_tree[j].destination < pivot.destination))
+            {
+                i++;
+                swap(&spanning_tree[i], &spanning_tree[j]);
+            }
+        }
+        swap(&spanning_tree[i + 1], &spanning_tree[high]);
+        int pivot_int = i + 1;
+
+        quick_sort(spanning_tree, low, pivot_int - 1);
+        quick_sort(spanning_tree, pivot_int + 1, high);
     }
 }
 
