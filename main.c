@@ -232,23 +232,30 @@ int add_edge(VERTEX **graph, int vertex1, int vertex2, long long weight, bool fi
     return 0;
 }
 
-void insert_sort(PQ_E spanning_tree[], int capacity, PQ_E min_edge)
-{
-    if (capacity == 0)
-    {
-        spanning_tree[0] = min_edge;
-        return;
+int partition(PQ_E arr[], int low, int high) {
+    PQ_E pivot = arr[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if (arr[j].index < pivot.index || (arr[j].index == pivot.index && arr[j].destination < pivot.destination)) {
+            i++;
+            swap(&arr[i], &arr[j]);
+        }
     }
-    int j = capacity - 1;
-    while (j >= 0 && (spanning_tree[j].index > min_edge.index ||
-                      (spanning_tree[j].index == min_edge.index &&
-                       spanning_tree[j].destination > min_edge.destination)))
-    {
-        spanning_tree[j + 1] = spanning_tree[j];
-        j--;
-    }
-    spanning_tree[j + 1] = min_edge;
+    swap(&arr[i + 1], &arr[high]);
+    return (i + 1);
 }
+
+
+void quick_sort(PQ_E arr[], int low, int high) {
+    if (low < high) {
+        int pivot = partition(arr, low, high);
+        quick_sort(arr, low, pivot - 1);
+        quick_sort(arr, pivot + 1, high);
+    }
+}
+
+
 
 int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
 {
@@ -292,7 +299,7 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
                 min_edge.index = min_edge.destination;
                 min_edge.destination = temp;
             }
-            insert_sort(spanning_tree, capacity, min_edge);
+            spanning_tree[capacity] = min_edge;
             capacity++;
             while (current != NULL)
             {
@@ -304,6 +311,8 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
             }
         }
     }
+
+    quick_sort(spanning_tree, 0, capacity - 1);
 
     if (capacity > 0)
     {
