@@ -40,7 +40,8 @@ PQ *create_priorityQueue(int capacity)
     return priorityQueue;
 }
 
-void resize(PQ *priorityQueue) {
+void resize(PQ *priorityQueue)
+{
     int new_capacity = priorityQueue->capacity * 2;
     PQ_E *new_heap = realloc(priorityQueue->heap, new_capacity * sizeof(PQ_E));
 
@@ -103,7 +104,8 @@ void heapify_down(PQ *priorityQueue, int index)
 
 void insert(PQ *priorityQueue, int index, int destination, long long weight)
 {
-    if (priorityQueue->size == priorityQueue->capacity) {
+    if (priorityQueue->size == priorityQueue->capacity)
+    {
         resize(priorityQueue);
     }
     priorityQueue->heap[priorityQueue->size].index = index;
@@ -273,11 +275,6 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
     PQ_E spanning_tree[N];
     bool visited[N];
     int capacity = 0;
-    int **addedToHeap = malloc(N * sizeof(int *));
-    for (int i = 0; i < N; i++)
-    {
-        addedToHeap[i] = calloc(N, sizeof(int));
-    }
 
     if (starting_vertex > N)
     {
@@ -295,14 +292,12 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
     while (current != NULL)
     {
         insert(priorityQueue, starting_vertex, current->index, current->weight);
-        addedToHeap[starting_vertex][current->index] = 1;
-        addedToHeap[current->index][starting_vertex] = 1;
         current = current->next;
     }
 
     long long total_cost = 0;
 
-    while (!is_empty(priorityQueue))
+    while (!is_empty(priorityQueue) && capacity < N - 1)
     {
         PQ_E min_edge = extract_min(priorityQueue);
         if (visited[min_edge.destination] == false)
@@ -323,12 +318,8 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
             {
                 if (visited[current->index] == false)
                 {
-                    if (!addedToHeap[current->index][destination_index] || !addedToHeap[destination_index][current->index])
-                    {
-                        addedToHeap[current->index][destination_index] = 1;
-                        addedToHeap[destination_index][current->index] = 1;
-                        insert(priorityQueue, destination_index, current->index, current->weight);
-                    }
+                    insert(priorityQueue, destination_index, current->index, current->weight);
+
                 }
                 current = current->next;
             }
@@ -358,10 +349,6 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
     {
         return 1;
     }
-    for (int i = 0; i < N; i++) {
-        free(addedToHeap[i]);
-    }
-    free(addedToHeap);
     destroy_priorityQueue(priorityQueue);
     return 0;
 }
