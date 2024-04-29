@@ -296,6 +296,7 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
     {
         insert(priorityQueue, starting_vertex, current->index, current->weight);
         addedToHeap[starting_vertex][current->index] = 1;
+        addedToHeap[current->index][starting_vertex] = 1;
         current = current->next;
     }
 
@@ -322,9 +323,10 @@ int prim_alg(VERTEX **graph, int starting_vertex, int N, bool *printed)
             {
                 if (visited[current->index] == false)
                 {
-                    if (!addedToHeap[current->index][destination_index] )
+                    if (!addedToHeap[current->index][destination_index] || !addedToHeap[destination_index][current->index])
                     {
                         addedToHeap[current->index][destination_index] = 1;
+                        addedToHeap[destination_index][current->index] = 1;
                         insert(priorityQueue, destination_index, current->index, current->weight);
                     }
                 }
